@@ -6,17 +6,20 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace dotnet_code_challenge.Manager
 {
     public class RaceDataManager : IRaceDataManager
     {
         private readonly ILogger logger;
+        private readonly IServiceProvider serviceProvider;
+        private readonly ISourceProvider sourceProvider;
 
-        public RaceDataManager(ILogger logger)
+        public RaceDataManager(ILogger logger, IServiceProvider serviceProvider, ISourceProvider sourceProvider)
         {
             this.logger = logger;
+            this.serviceProvider = serviceProvider;
+            this.sourceProvider = sourceProvider;
         }
 
         /// <summary>
@@ -28,15 +31,18 @@ namespace dotnet_code_challenge.Manager
         {
             try
             {
-                var allSources = GetAllSources();
+                var allSources = sourceProvider.GetAllSources();
                 var allHorses = new List<HorseCommonModel>();
 
                 foreach (var source in allSources)
                 {
-                    var dataProvider = Bootstraper.serviceProvider.GetServices<IDataProvider>().OfType<IDataProvider>().SingleOrDefault(x => source.Key.Contains(x.KeySelector));
+                    var allDataProviders = serviceProvider.GetService(typeof(IEnumerable<IDataProvider>)) as IEnumerable<IDataProvider>;
+                    var dataProvider = allDataProviders.SingleOrDefault(x => source.Key.Contains(x.KeySelector));
                     if (dataProvider == null)
                     {
-                        throw new ApplicationException($"Could not find a DataProvider for {source.Key}");
+                        // We'll log an error and even trigger an alarm but will continue to return the valid sources to keep operation running
+                        logger.LogError($"Could not find a DataProvider for {source.Key}");
+                        continue;
                     }
                     allHorses.AddRange(dataProvider.ReadData(source.Value));
                 }
@@ -52,22 +58,6 @@ namespace dotnet_code_challenge.Manager
                 logger.LogError($"Failed to get Horses from sources. Exception:{ex}");
                 throw;
             }
-        }
-
-
-        /// <summary>
-        /// This should be a Reader set of classes that can read data from different sources, for simplicity we assume all the sources are files in a folder
-        /// and their name will always have the key to distinguish the required provider. Again this should be seperated in a different class
-        /// </summary>
-        /// <returns></returns>
-        private Dictionary<string, string> GetAllSources()
-        {
-            var result = new Dictionary<string, string>();
-            foreach (var item in Directory.GetFiles(AppSettings.SourcePath))
-            {
-                result.Add(item, File.ReadAllText(item));
-            }
-            return result;
         }
     }
 }

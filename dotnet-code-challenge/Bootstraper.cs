@@ -12,11 +12,11 @@ namespace dotnet_code_challenge
         public static void SetupAutofac()
         {
             serviceProvider = new ServiceCollection()
-                        .AddLogging()
                         .AddSingleton<IDataProvider, CaulfieldRaceDataProvider>()
                         .AddSingleton<IDataProvider, WolferhamptonRaceDataProvider>()
                         .AddSingleton<IRaceDataManager, RaceDataManager>()
                         .AddSingleton<ILogger, ConsoleLogger>()
+                        .AddSingleton<ISourceProvider, SourceProvider>()
                         .BuildServiceProvider();
         }
     }
