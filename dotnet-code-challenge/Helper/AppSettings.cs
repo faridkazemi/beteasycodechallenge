@@ -1,4 +1,7 @@
-﻿namespace dotnet_code_challenge.Helper
+using System.IO;
+using System.Reflection;
+
+namespace dotnet_code_challenge.Helper
 {
     public static class AppSettings
     {
